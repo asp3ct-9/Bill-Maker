@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bill Generator</title>
+<style>
+:root{--orange:#ff6848;--dark:#222}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;color:var(--dark)}
+.page{display:none;min-height:100vh;padding:20px 14px 40px}
+.page.active{display:block}
+.card{max-width:560px;margin:0 auto;background:#fff;border:1px solid #e8e8e8;border-radius:18px;padding:22px;box-shadow:0 12px 35px rgba(0,0,0,.08)}
+h1{font-size:22px;margin:0 0 6px}.sub{color:#777;font-size:13px;margin-bottom:20px}
+.section{margin-bottom:18px}.section-title{font-size:13px;font-weight:700;margin-bottom:10px}
+label{font-size:12px;color:#666;display:block;margin:0 0 6px}
+input{width:100%;padding:11px 12px;border:1px solid #ddd;border-radius:9px;outline:none;font-size:16px}
+input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,104,72,.12)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.items-head,.item-row{display:grid;grid-template-columns:1fr 62px 80px 36px;gap:6px;align-items:center}
+.items-head{font-size:11px;color:#777;margin-bottom:7px}.item-row{margin-bottom:8px}.item-row input{min-width:0;padding:10px 8px}
+.remove{border:0;background:#fff1ee;color:#d74729;border-radius:8px;height:41px;cursor:pointer;font-size:18px}
+.add{width:100%;border:1px dashed #ff9c87;background:#fff8f6;color:#e75436;padding:11px;border-radius:9px;cursor:pointer;font-weight:600;font-size:14px}
+.total-preview{display:flex;justify-content:space-between;background:#fafafa;border:1px solid #eee;padding:12px;border-radius:10px;margin-top:14px;font-weight:700}
+.actions{display:flex;gap:10px;margin-top:18px}
+button.primary,button.secondary{border:0;border-radius:10px;padding:13px 15px;cursor:pointer;font-weight:700;font-size:15px}
+.primary{background:var(--orange);color:#fff;flex:1}.secondary{background:#eee;color:#333}
+.primary:disabled,.secondary:disabled{opacity:.55;cursor:default}
+.err{color:#d74729;font-size:13px;margin-top:10px;min-height:16px}
+.hrow{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px}.hrow h1{margin:0}
+.hrow button{padding:9px 12px;font-size:13px;white-space:nowrap}
+textarea{width:100%;padding:11px 12px;border:1px solid #ddd;border-radius:9px;outline:none;font-size:16px;font-family:inherit;min-height:110px;resize:vertical}
+textarea:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,104,72,.12)}
+.logo-prev{display:block;max-width:100%;max-height:160px;object-fit:contain;margin:0 auto 12px;border:1px dashed #ddd;border-radius:10px;padding:8px;background:#fff}
+.row-btns{display:flex;gap:10px;flex-wrap:wrap}.row-btns button{flex:1;min-width:120px}
+.ok{color:#2a8a4a;font-size:13px;min-height:16px;margin-top:10px}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}
+.sw{border:2px solid #e3e3e3;background:#fff;border-radius:12px;padding:8px 6px 9px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#444;font-family:inherit}
+.sw .dot{width:34px;height:34px;border-radius:50%;border:2px solid rgba(0,0,0,.12)}
+.sw.sel{border-color:#222;box-shadow:0 0 0 3px rgba(0,0,0,.08)}
+.sw.sel .dot{box-shadow:inset 0 0 0 3px #fff}
+.sw-group{font-size:11px;color:#888;margin:12px 0 7px;text-transform:uppercase;letter-spacing:.04em}
+.sw-group:first-of-type{margin-top:0}
+/* output page */
+.topbar{max-width:900px;margin:0 auto 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.topbar h2{margin:0;font-size:18px}
+.share-bar{max-width:900px;margin:0 auto 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.share-bar button{padding:12px 10px}
+.share-bar{grid-template-columns:1fr 1fr}
+.share-bar .dl{background:#fff;border:1px solid #ddd;color:#333}
+.menu-wrap{position:relative}.menu-wrap>button{width:100%}
+.menu{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #e3e3e3;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.18);padding:6px;z-index:30}
+.menu.open{display:block}
+.menu button{display:block;width:100%;text-align:left;background:#fff;border:0;border-radius:8px;padding:13px 12px;font-size:15px;font-weight:600;color:#333;cursor:pointer}
+.menu button:hover,.menu button:active{background:#fff1ee;color:#d74729}
+.menu button:disabled{opacity:.5}
+.status{max-width:900px;margin:0 auto 12px;font-size:13px;color:#555;min-height:18px;text-align:center}
+.bill-holder{max-width:900px;margin:0 auto;overflow:hidden}
+.bill-scale{transform-origin:top left;width:878px}
+/* the bill itself: fixed 878px design width, height grows with items */
+.bill{width:878px;min-height:1280px;background:#fff;border:10px solid var(--orange);border-radius:36px;overflow:hidden;color:var(--orange);display:flex;flex-direction:column;font-family:Arial,Helvetica,sans-serif}
+.bill-header{background:#fff;text-align:center;padding:13px 18px 8px}
+.logo{width:310px;height:255px;object-fit:contain;display:block;margin:0 auto}
+.address{font-size:22px;line-height:1.2;margin-top:2px}
+.meta{display:flex;justify-content:space-between;padding:8px 30px;font-size:26px;border-top:4px solid var(--orange)}
+.row{display:grid;grid-template-columns:57% 23% 20%}
+.table-header{background:var(--orange);color:#fff;font-size:36px;line-height:58px;height:58px;text-align:center}
+.table-header .cell{border-right:4px solid #fff}
+.body{position:relative;flex:1;min-height:420px}
+.body::before,.body::after{content:"";position:absolute;top:0;bottom:0;width:4px;background:var(--orange)}
+.body::before{left:calc(57% - 4px)}.body::after{left:calc(80% - 4px)}
+.body .row{position:relative}
+.body .row>div{font-size:31px;line-height:1.25;padding:12px 22px;word-break:break-word}
+.body .row>div:nth-child(2),.body .row>div:nth-child(3){text-align:center;padding-left:6px;padding-right:6px}
+.total-row{border-top:4px solid var(--orange);height:66px}
+.total-row>div{display:flex;align-items:center;justify-content:center;font-size:33px;font-weight:700}
+.total-row .label{border-right:4px solid var(--orange);grid-column:2;grid-row:1}
+.total-row .amt{grid-column:3;grid-row:1}
+.footer{height:82px;flex:0 0 82px;border-top:4px solid var(--orange);display:flex;align-items:center;justify-content:center;font-size:31px;background:#fff}
+.export-stage{position:fixed;left:-20000px;top:0}
+@media print{
+ @page{margin:0}
+ body{background:#fff}.page{display:none!important}
+ #pageOut{display:block!important;padding:0}.topbar,.share-bar,.status{display:none}
+ .bill-holder{max-width:none}
+}
+</style>
+</head>
+<body>
+
+<!-- PAGE 1: INPUT -->
+<section class="page active" id="pageIn">
+ <div class="card">
+  <div class="hrow"><h1>Bill Generator</h1><button class="secondary" id="setBtn" type="button">⚙ Settings</button></div>
+  <div class="sub">Enter the order details, then tap Generate Bill.</div>
+  <div class="section two">
+   <div><label>Bill Number</label><input id="billNo" value="0001" inputmode="numeric"></div>
+   <div><label>Date</label><input id="billDate" type="date"></div>
+  </div>
+  <div class="section">
+   <div class="section-title">Items</div>
+   <div class="items-head"><span>Menu</span><span>Qty</span><span>Rate</span><span></span></div>
+   <div id="items"></div>
+   <button class="add" id="addItem" type="button">+ Add Item</button>
+  </div>
+  <div class="total-preview"><span>Current Total</span><span id="previewTotal">₹0</span></div>
+  <div class="err" id="err"></div>
+  <div class="actions">
+   <button class="secondary" id="clearBtn" type="button">Clear</button>
+   <button class="primary" id="genBtn" type="button">Generate Bill →</button>
+  </div>
+ </div>
+</section>
+
+<!-- SETTINGS -->
+<section class="page" id="pageSet">
+ <div class="card">
+  <div class="hrow"><h1>Settings</h1><button class="secondary" id="setBack" type="button">← Back</button></div>
+  <div class="sub">Change the logo and address shown on your bill. Saved on this device.</div>
+  <div class="section">
+   <div class="section-title">Logo</div>
+   <img class="logo-prev" id="logoPrev" alt="Logo preview" style="display:none">
+   <input type="file" id="logoFile" accept="image/*" style="display:none">
+   <div class="row-btns">
+    <button class="primary" id="logoUp" type="button">Upload Logo</button>
+    <button class="secondary" id="logoReset" type="button">Remove Logo</button>
+   </div>
+  </div>
+  <div class="section">
+   <div class="section-title">Bill Colour</div>
+   <label>Pick the colour used for borders, headings and text on the bill</label>
+   <div id="swatches"></div>
+  </div>
+  <div class="section">
+   <div class="section-title">Address</div>
+   <label>Each new line appears as a new line on the bill</label>
+   <textarea id="addrIn" placeholder="Shop name, address, phone, GST no. etc."></textarea>
+  </div>
+  <div class="row-btns">
+   <button class="secondary" id="addrReset" type="button">Clear Address</button>
+   <button class="primary" id="setSave" type="button">Save</button>
+  </div>
+  <div class="ok" id="setMsg"></div>
+ </div>
+</section>
+
+<!-- PAGE 2: OUTPUT -->
+<section class="page" id="pageOut">
+ <div class="topbar">
+  <button class="secondary" id="backBtn" type="button">← Edit Items</button>
+  <h2>Your Bill</h2>
+ </div>
+ <div class="share-bar">
+  <div class="menu-wrap">
+   <button class="primary" id="shareBtn" type="button">Share ▾</button>
+   <div class="menu" id="shareMenu">
+    <button id="sharePng" type="button">Share as PNG (image)</button>
+    <button id="sharePdf" type="button">Share as PDF</button>
+   </div>
+  </div>
+  <div class="menu-wrap">
+   <button class="secondary dl" id="dlBtn" type="button">Download ▾</button>
+   <div class="menu" id="dlMenu">
+    <button id="dlPng" type="button">Download PNG (image)</button>
+    <button id="dlPdf" type="button">Download PDF</button>
+   </div>
+  </div>
+ </div>
+ <div class="status" id="status"></div>
+ <div class="bill-holder" id="holder"><div class="bill-scale" id="scaler"><div id="billMount"></div></div></div>
+</section>
+
+<div class="export-stage" id="stage"></div>
+
+<template id="billTpl">
+<div class="bill">
+ <div class="bill-header">
+  <img class="logo" alt="Logo">
+  <div class="address"></div>
+ </div>
+ <div class="meta"><span class="mNo"></span><span class="mDate"></span></div>
+ <div class="row table-header"><div class="cell">Menu</div><div class="cell">Qty</div><div>Rate</div></div>
+ <div class="body"></div>
+ <div class="row total-row"><div class="label">Total</div><div class="amt"></div></div>
+ <div class="footer">Thank You ! Visit Again...</div>
+</div>
+</template>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const itemsEl=$('items');
+/* ---------- settings (logo + address) ---------- */
+const DEF_LOGO='';
+const DEF_ADDR='';
+let settings={logo:'',address:'',color:'#ff6848'};
+try{const r=localStorage.getItem('billSettings');if(r)settings=Object.assign(settings,JSON.parse(r))}catch(e){}
+function saveSettings(){try{localStorage.setItem('billSettings',JSON.stringify(settings));return true}catch(e){return false}}
+const curLogo=()=>settings.logo||DEF_LOGO;
+const curAddr=()=>(settings.address&&settings.address.trim())?settings.address:DEF_ADDR;
+function setAddress(box,text){
+ box.textContent='';
+ text.split(/\r?\n/).forEach((line,i)=>{if(i)box.appendChild(document.createElement('br'));box.appendChild(document.createTextNode(line))});
+}
+function showLogoPrev(){const l=curLogo(),p=$('logoPrev');if(l){p.src=l;p.style.display='block'}else{p.removeAttribute('src');p.style.display='none'}}
+function openSettings(){showLogoPrev();renderSwatches();$('addrIn').value=curAddr();$('setMsg').textContent='';show('pageSet')}
+function msg(t,bad){const m=$('setMsg');m.textContent=t;m.style.color=bad?'#d74729':'#2a8a4a'}
+$('setBtn').onclick=openSettings;
+$('setBack').onclick=()=>show('pageIn');
+$('logoUp').onclick=()=>$('logoFile').click();
+$('logoFile').onchange=e=>{
+ const f=e.target.files[0];if(!f)return;
+ const rd=new FileReader();
+ rd.onload=()=>{
+  const img=new Image();
+  img.onload=()=>{
+   const max=700,sc=Math.min(1,max/Math.max(img.width,img.height));
+   const c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
+   c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+   settings.logo=c.toDataURL('image/png');showLogoPrev();
+   const ok=saveSettings();msg(ok?'Logo saved ✓':'Logo applied, but could not be saved on this device.',!ok);
+  };
+  img.onerror=()=>msg('That file could not be read as an image.',true);
+  img.src=rd.result;
+ };
+ rd.readAsDataURL(f);e.target.value='';
+};
+$('logoReset').onclick=()=>{settings.logo='';saveSettings();showLogoPrev();msg('Logo removed ✓')};
+$('addrReset').onclick=()=>{$('addrIn').value='';msg('Address cleared. Tap Save to keep it.')};
+$('setSave').onclick=()=>{settings.address=$('addrIn').value.trim();msg(saveSettings()?'Saved ✓':'Could not save on this device.',false)};
+
+/* ---------- bill colour ---------- */
+const COLOR_GROUPS=[
+ {g:'Orange',c:[['Orange','#ff6848'],['Bright Orange','#ff8a00'],['Burnt Orange','#d9570f'],['Amber','#f59e0b']]},
+ {g:'Red',c:[['Red','#e11d2e'],['Crimson','#c8102e'],['Maroon','#8b1e2d'],['Brick Red','#b83a2b']]},
+ {g:'Black',c:[['Black','#000000'],['Charcoal','#2b2b2b'],['Slate','#475569']]}
+];
+const curColor=()=>/^#[0-9a-f]{6}$/i.test(settings.color||'')?settings.color:'#ff6848';
+function renderSwatches(){
+ const box=$('swatches');box.innerHTML='';
+ COLOR_GROUPS.forEach(grp=>{
+  el('div',{className:'sw-group',textContent:grp.g},box);
+  const wrap=el('div',{className:'swatches'},box);
+  grp.c.forEach(([name,hex])=>{
+   const b=el('button',{type:'button',className:'sw'+(hex.toLowerCase()===curColor().toLowerCase()?' sel':'')},wrap);
+   el('span',{className:'dot'},b).style.background=hex;
+   el('span',{textContent:name},b);
+   b.onclick=()=>{settings.color=hex;renderSwatches();msg(saveSettings()?name+' colour saved ✓':'Colour applied, but could not be saved on this device.',false)};
+  });
+ });
+}
+const money=n=>Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+
+function el(tag,attrs={},parent){const e=document.createElement(tag);Object.assign(e,attrs);if(parent)parent.appendChild(e);return e}
+
+function addItem(name='',qty='',rate=''){
+ const row=el('div',{className:'item-row'},itemsEl);
+ el('input',{className:'name',placeholder:'Item name',value:name},row);
+ el('input',{className:'qtyInput',type:'number',min:0,step:1,placeholder:'0',value:qty,inputMode:'numeric'},row);
+ el('input',{className:'rateInput',type:'number',min:0,step:'0.01',placeholder:'0',value:rate,inputMode:'decimal'},row);
+ const rm=el('button',{className:'remove',type:'button',title:'Remove',textContent:'×'},row);
+ row.querySelectorAll('input').forEach(i=>i.addEventListener('input',updatePreview));
+ rm.addEventListener('click',()=>{row.remove();updatePreview()});
+ updatePreview();
+}
+function getItems(){
+ const out=[];
+ document.querySelectorAll('.item-row').forEach(r=>{
+  const name=r.querySelector('.name').value.trim();
+  const qty=Number(r.querySelector('.qtyInput').value)||0;
+  const rate=Number(r.querySelector('.rateInput').value)||0;
+  if(name||qty||rate)out.push({name,qty,rate});
+ });
+ return out;
+}
+const totalOf=items=>items.reduce((s,i)=>s+i.qty*i.rate,0);
+function updatePreview(){$('previewTotal').textContent='₹'+money(totalOf(getItems()))}
+
+function fmtDate(v){
+ if(!v)return '';const [y,m,d]=v.split('-');return `${d}/${m}/${y}`;
+}
+
+/* Build a bill element (full 878px size) */
+function buildBill(data){
+ const b=$('billTpl').content.firstElementChild.cloneNode(true);
+ b.style.setProperty('--orange',curColor());
+ b.querySelector('.mNo').textContent='Bill No: '+data.no;
+ b.querySelector('.mDate').textContent='Date: '+fmtDate(data.date);
+ const lg=b.querySelector('.logo');if(curLogo())lg.src=curLogo();else lg.remove();
+ const ad=b.querySelector('.address');if(curAddr().trim())setAddress(ad,curAddr());else ad.remove();
+ const body=b.querySelector('.body');
+ data.items.forEach(it=>{
+  const r=el('div',{className:'row'},body);
+  el('div',{textContent:it.name||'—'},r);
+  el('div',{textContent:it.qty},r);
+  el('div',{textContent:money(it.rate)},r);
+ });
+ b.querySelector('.amt').textContent=money(totalOf(data.items));
+ return b;
+}
+
+let current=null;
+function show(page){
+ document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===page));
+ window.scrollTo(0,0);
+}
+function fitBill(){
+ const holder=$('holder'),scaler=$('scaler');
+ const scale=Math.min(1,holder.clientWidth/878);
+ scaler.style.transform=`scale(${scale})`;
+ holder.style.height=(scaler.offsetHeight*scale)+'px';
+}
+function generate(){
+ const items=getItems().filter(i=>i.name||i.qty);
+ if(!items.length){$('err').textContent='Please add at least one item.';return}
+ $('err').textContent='';
+ current={no:$('billNo').value.trim()||'0001',date:$('billDate').value,items};
+ const mount=$('billMount');mount.innerHTML='';mount.appendChild(buildBill(current));
+ $('status').textContent='';
+ show('pageOut');
+ requestAnimationFrame(fitBill);
+}
+window.addEventListener('resize',()=>{if($('pageOut').classList.contains('active'))fitBill()});
+
+/* ---------- Export ---------- */
+async function renderCanvas(){
+ if(typeof html2canvas==='undefined')throw new Error('Export library failed to load. Check your internet connection.');
+ const stage=$('stage');stage.innerHTML='';
+ const b=buildBill(current);stage.appendChild(b);
+ if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+ const img=b.querySelector('img');
+ if(img&&!img.complete)await new Promise(r=>{img.onload=img.onerror=r});
+ const canvas=await html2canvas(b,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false,width:b.offsetWidth,height:b.offsetHeight,windowWidth:1200});
+ stage.innerHTML='';
+ return canvas;
+}
+const fname=ext=>`Bill-${(current.no||'0001').replace(/[^\w-]+/g,'')}.${ext}`;
+const toBlob=(canvas,type='image/png')=>new Promise(r=>canvas.toBlob(r,type,0.95));
+
+async function makeFile(kind){
+ const canvas=await renderCanvas();
+ if(kind==='png')return new File([await toBlob(canvas)],fname('png'),{type:'image/png'});
+ const {jsPDF}=window.jspdf;
+ const w=canvas.width/2,h=canvas.height/2;
+ const pdf=new jsPDF({orientation:w>h?'l':'p',unit:'px',format:[w,h],hotfixes:['px_scaling']});
+ pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,w,h);
+ return new File([pdf.output('blob')],fname('pdf'),{type:'application/pdf'});
+}
+function download(file){
+ const url=URL.createObjectURL(file);
+ const a=el('a',{href:url,download:file.name});document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+const btns=['sharePng','sharePdf','dlPng','dlPdf','shareBtn','dlBtn'].map($);
+const menus=[['shareBtn','shareMenu'],['dlBtn','dlMenu']];
+function closeMenus(){menus.forEach(([,m])=>$(m).classList.remove('open'))}
+menus.forEach(([b,m])=>{
+ $(b).addEventListener('click',e=>{e.stopPropagation();const open=$(m).classList.contains('open');closeMenus();if(!open)$(m).classList.add('open')});
+ $(m).addEventListener('click',e=>e.stopPropagation());
+});
+document.addEventListener('click',closeMenus);
+async function run(kind,mode){
+ closeMenus();
+ const st=$('status');btns.forEach(b=>b.disabled=true);st.textContent='Preparing '+kind.toUpperCase()+'…';
+ try{
+  const file=await makeFile(kind);
+  if(mode==='share'){
+   if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:'Bill '+current.no,text:'Bill '+current.no});st.textContent='Shared ✓'}
+    catch(e){st.textContent=e.name==='AbortError'?'Share cancelled.':'Share failed: '+e.message}
+   }else{
+    download(file);st.textContent='Sharing isn’t supported on this browser, so the file was downloaded instead. Open it from your downloads to send it.';
+   }
+  }else{download(file);st.textContent='Downloaded ✓'}
+ }catch(e){st.textContent='Error: '+e.message}
+ btns.forEach(b=>b.disabled=false);
+}
+$('sharePng').onclick=()=>run('png','share');
+$('sharePdf').onclick=()=>run('pdf','share');
+$('dlPng').onclick=()=>run('png','dl');
+$('dlPdf').onclick=()=>run('pdf','dl');
+
+/* ---------- wiring ---------- */
+$('addItem').onclick=()=>addItem();
+$('clearBtn').onclick=()=>{itemsEl.innerHTML='';addItem();addItem();$('err').textContent=''};
+$('genBtn').onclick=generate;
+$('backBtn').onclick=()=>show('pageIn');
+const t=new Date();$('billDate').value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+addItem();addItem();
+</script>
+</body>
+</html>
